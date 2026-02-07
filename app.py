@@ -8,7 +8,37 @@ from browser_client import (
 from parse import parse_with_openai
 
 # Streamlit UI
-st.title("AI Web Scraper")
+st.title("Smart Scraper")
+
+# Add app description and flow
+st.markdown("""
+### 📋 How This App Works
+
+This AI-powered web scraper helps you extract specific information from any website using natural language instructions.
+
+#### Application Flow:
+
+1. **🌐 Enter a Website URL**  
+   Paste the URL of the website you want to scrape in the input field below.
+
+2. **🔍 Scrape the Website**  
+   Click the "Scrape Website" button to fetch and clean the website's content.  
+   The app will extract all visible text from the page and remove unnecessary HTML tags.
+
+3. **👀 Review the DOM Content** *(Optional)*  
+   Expand the "View DOM Content" section to see the raw extracted text from the website.
+
+4. **💬 Describe What to Parse**  
+   Enter a natural language description of what information you want to extract.  
+   Examples: *"Extract all product names and prices"* or *"Get contact information"*
+
+5. **🤖 Parse Content with AI**  
+   Click "Parse Content" to let AI analyze the scraped content and extract the specific information you requested.  
+   The AI will intelligently parse the content and return structured results.
+
+---
+""")
+
 url = st.text_input("Enter Website URL")
 
 # Step 1: Scrape the Website
