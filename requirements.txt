@@ -1,0 +1,6 @@
+streamlit
+python-dotenv
+playwright
+langchain-ollama
+langchain-core
+openai
