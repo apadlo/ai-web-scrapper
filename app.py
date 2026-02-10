@@ -39,24 +39,31 @@ This AI-powered web scraper helps you extract specific information from any webs
 ---
 """)
 
-url = st.text_input("Enter Website URL")
+url = st.text_input("Enter Website URL", placeholder="https://www.example.com")
 
 # Step 1: Scrape the Website
 if st.button("Scrape Website"):
-    if url:
-        st.write("Scraping the website...")
+    if not url:
+        st.error("❌ Please enter a website URL")
+    elif not url.startswith(("http://", "https://")):
+        st.error("❌ Please enter a full URL starting with http:// or https://")
+    else:
+        try:
+            st.write("Scraping the website...")
 
-        # Scrape the website
-        dom_content = scrape_with_browser_api(url)
-        body_content = extract_body_content(dom_content)
-        cleaned_content = clean_body_content(body_content)
+            # Scrape the website
+            dom_content = scrape_with_browser_api(url)
+            body_content = extract_body_content(dom_content)
+            cleaned_content = clean_body_content(body_content)
 
-        # Store the DOM content in Streamlit session state
-        st.session_state.dom_content = cleaned_content
+            # Store the DOM content in Streamlit session state
+            st.session_state.dom_content = cleaned_content
 
-        # Display the DOM content in an expandable text box
-        with st.expander("View DOM Content"):
-            st.text_area("DOM Content", cleaned_content, height=300)
+            # Display the DOM content in an expandable text box
+            with st.expander("View DOM Content"):
+                st.text_area("DOM Content", cleaned_content, height=300)
+        except Exception as e:
+            st.error(f"❌ Error scraping the website: {str(e)}")
 
 
 # Step 2: Ask Questions About the DOM Content
