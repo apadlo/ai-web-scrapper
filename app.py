@@ -1,4 +1,5 @@
 import streamlit as st
+from urllib.parse import urlparse
 from browser_client import (
     scrape_with_browser_api,
     extract_body_content,
@@ -45,25 +46,33 @@ url = st.text_input("Enter Website URL", placeholder="https://www.example.com")
 if st.button("Scrape Website"):
     if not url:
         st.error("❌ Please enter a website URL")
-    elif not url.startswith(("http://", "https://")):
-        st.error("❌ Please enter a full URL starting with http:// or https://")
     else:
-        try:
-            st.write("Scraping the website...")
+        # Normalize and validate URL
+        normalized_url = url.strip()
+        parsed_url = urlparse(normalized_url)
+        
+        if parsed_url.scheme.lower() not in ("http", "https"):
+            st.error("❌ Please enter a full URL starting with http:// or https://")
+        elif not parsed_url.netloc:
+            st.error("❌ Please enter a valid URL with a host (e.g., https://example.com)")
+        else:
+            url = normalized_url
+            try:
+                st.write("Scraping the website...")
 
-            # Scrape the website
-            dom_content = scrape_with_browser_api(url)
-            body_content = extract_body_content(dom_content)
-            cleaned_content = clean_body_content(body_content)
+                # Scrape the website
+                dom_content = scrape_with_browser_api(url)
+                body_content = extract_body_content(dom_content)
+                cleaned_content = clean_body_content(body_content)
 
-            # Store the DOM content in Streamlit session state
-            st.session_state.dom_content = cleaned_content
+                # Store the DOM content in Streamlit session state
+                st.session_state.dom_content = cleaned_content
 
-            # Display the DOM content in an expandable text box
-            with st.expander("View DOM Content"):
-                st.text_area("DOM Content", cleaned_content, height=300)
-        except Exception as e:
-            st.error(f"❌ Error scraping the website: {str(e)}")
+                # Display the DOM content in an expandable text box
+                with st.expander("View DOM Content"):
+                    st.text_area("DOM Content", cleaned_content, height=300)
+            except Exception as e:
+                st.error(f"❌ Error scraping the website: {str(e)}")
 
 
 # Step 2: Ask Questions About the DOM Content
