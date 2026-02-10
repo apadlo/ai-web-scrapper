@@ -56,12 +56,11 @@ if st.button("Scrape Website"):
         elif not parsed_url.netloc:
             st.error("❌ Please enter a valid URL with a host (e.g., https://example.com)")
         else:
-            url = normalized_url
             try:
                 st.write("Scraping the website...")
 
                 # Scrape the website
-                dom_content = scrape_with_browser_api(url)
+                dom_content = scrape_with_browser_api(normalized_url)
                 body_content = extract_body_content(dom_content)
                 cleaned_content = clean_body_content(body_content)
 
