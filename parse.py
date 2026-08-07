@@ -6,7 +6,22 @@ from os import environ
 
 load_dotenv()
 
-openai.api_key = environ.get("OPENAI_API_KEY")
+
+def _get_secret(name, default=None):
+    value = environ.get(name)
+    if value is not None:
+        return value
+
+    try:
+        import streamlit as st
+
+        return st.secrets.get(name, default)
+    except Exception:
+        return default
+
+
+openai.api_key = _get_secret("OPENAI_API_KEY")
+MAX_OUTPUT_TOKENS = int(_get_secret("OPENAI_MAX_OUTPUT_TOKENS", 600))
 
 template = (
     "You are tasked with extracting specific information from the following text content: {dom_content}. "
@@ -50,6 +65,7 @@ def parse_with_openai(dom_chunks, parse_description):
                 {"role": "user", "content": prompt_text}
             ],
             temperature=0,
+            max_tokens=MAX_OUTPUT_TOKENS,
         )
 
         result = response.choices[0].message.content
@@ -57,4 +73,3 @@ def parse_with_openai(dom_chunks, parse_description):
         parsed_results.append(result)
 
     return "\n".join(parsed_results)
-
