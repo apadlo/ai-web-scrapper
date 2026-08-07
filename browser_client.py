@@ -3,23 +3,48 @@ import asyncio
 import sys
 from bs4 import BeautifulSoup
 from os import environ
-from playwright.sync_api import Playwright, sync_playwright
+from playwright.sync_api import Error as PlaywrightError, Playwright, sync_playwright
 
 # Load environment variables from .env if present.
 load_dotenv()
 
-# Set your Browser API credentials via AUTH in .env or environment.
-AUTH = environ.get("AUTH")
 TARGET_URL_DEFAULT = "https://example.com"
 
+
+def _get_bright_data_auth():
+    auth = environ.get("AUTH")
+    if auth:
+        return auth
+
+    try:
+        import streamlit as st
+
+        return st.secrets.get("AUTH")
+    except Exception:
+        return None
+
+
 def _scrape_with_browser_api_sync(playwright: Playwright, url: str = TARGET_URL_DEFAULT) -> str:
-    if not AUTH or AUTH == "USER:PASS":
+    auth = _get_bright_data_auth()
+    if not auth or auth == "USER:PASS":
         raise Exception(
-            "Provide Scraping Browsers credentials in AUTH environment variable or update the script."
+            "Provide Bright Data Scraping Browser credentials in the AUTH secret."
         )
     print("Connecting to Browser...")
-    endpoint_url = f"wss://{AUTH}@brd.superproxy.io:9222"
-    browser = playwright.chromium.connect_over_cdp(endpoint_url)
+    endpoint_url = f"wss://{auth}@brd.superproxy.io:9222"
+    try:
+        browser = playwright.chromium.connect_over_cdp(endpoint_url)
+    except PlaywrightError as exc:
+        error_message = str(exc)
+        if "wrong_password" in error_message or "407 Auth Failed" in error_message:
+            raise Exception(
+                "Bright Data authentication failed. Update the AUTH secret with the current "
+                "Scraping Browser username and password, then reboot the app."
+            ) from exc
+        raise Exception(
+            "Could not connect to Bright Data Scraping Browser. Check the AUTH secret and zone settings."
+        ) from exc
+
     try:
         print(f"Connected! Navigating to {url}...")
         page = browser.new_page()
