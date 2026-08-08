@@ -11,7 +11,7 @@ permissions:
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -45,7 +45,7 @@ jobs:
 
               console.log(`Initial HTTP status: ${response?.status() ?? 'unknown'}`);
 
-              for (let attempt = 1; attempt <= 4; attempt += 1) {
+              for (let attempt = 1; attempt <= 8; attempt += 1) {
                 const bodyText = await page.locator('body').innerText({ timeout: 10_000 });
 
                 if (appContentPattern.test(bodyText)) {
