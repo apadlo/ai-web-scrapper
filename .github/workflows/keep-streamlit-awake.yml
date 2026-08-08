@@ -85,6 +85,14 @@ jobs:
                       wakeBox.y + wakeBox.height / 2,
                     );
                   }
+
+                  await page.waitForTimeout(60_000);
+                  continue;
+                }
+
+                if (attempt > 1) {
+                  console.log(`Streamlit sleep screen is not visible on attempt ${attempt}.`);
+                  break;
                 }
 
                 await page.waitForTimeout(60_000);
