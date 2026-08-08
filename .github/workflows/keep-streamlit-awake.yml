@@ -1,0 +1,113 @@
+name: Keep Streamlit Awake
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Open Streamlit app in a browser
+        run: |
+          node <<'JS'
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const appUrl = 'https://smart-scrapper.streamlit.app/';
+            const appContentPattern = /Smart Scraper/i;
+            const browser = await chromium.launch();
+            const page = await browser.newPage({
+              userAgent:
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 ' +
+                '(KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+            });
+
+            try {
+              console.log(`Opening ${appUrl}`);
+              const response = await page.goto(appUrl, {
+                waitUntil: 'domcontentloaded',
+                timeout: 120_000,
+              });
+
+              console.log(`Initial HTTP status: ${response?.status() ?? 'unknown'}`);
+
+              for (let attempt = 1; attempt <= 4; attempt += 1) {
+                const bodyText = await page.locator('body').innerText({ timeout: 10_000 });
+
+                if (appContentPattern.test(bodyText)) {
+                  console.log(`Streamlit app content loaded on attempt ${attempt}.`);
+                  break;
+                }
+
+                if (/this app has gone to sleep/i.test(bodyText)) {
+                  console.log(`Streamlit sleep screen detected on attempt ${attempt}; clicking wake control.`);
+
+                  const wakeBox = await page.evaluate(() => {
+                    const candidates = Array.from(document.querySelectorAll('*'))
+                      .filter((element) => /yes,\s*get this app back up/i.test(element.textContent || ''))
+                      .map((element) => {
+                        const rect = element.getBoundingClientRect();
+                        return {
+                          tagName: element.tagName,
+                          text: (element.textContent || '').trim(),
+                          x: rect.x,
+                          y: rect.y,
+                          width: rect.width,
+                          height: rect.height,
+                          area: rect.width * rect.height,
+                        };
+                      })
+                      .filter((candidate) => candidate.width > 0 && candidate.height > 0)
+                      .sort((a, b) => a.area - b.area);
+
+                    return candidates[0] || null;
+                  });
+
+                  console.log(`Wake target: ${JSON.stringify(wakeBox)}`);
+
+                  if (wakeBox) {
+                    await page.mouse.click(
+                      wakeBox.x + wakeBox.width / 2,
+                      wakeBox.y + wakeBox.height / 2,
+                    );
+                  }
+                }
+
+                await page.waitForTimeout(60_000);
+              }
+
+              const title = await page.title();
+              const bodyText = await page.locator('body').innerText({ timeout: 10_000 });
+
+              console.log(`Final page title: ${title}`);
+              console.log(`Visible text sample: ${bodyText.slice(0, 300).replace(/\s+/g, ' ')}`);
+
+              if (/this app has gone to sleep/i.test(bodyText)) {
+                throw new Error('Streamlit app was still asleep after the browser visit.');
+              }
+
+              if (!appContentPattern.test(bodyText)) {
+                throw new Error('Streamlit app content did not load.');
+              }
+            } finally {
+              await browser.close();
+            }
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          JS
